@@ -1,2 +1,4 @@
 .env
 .fseventsd
+test_results.txt
+boot_out.txt
