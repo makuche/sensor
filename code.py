@@ -72,7 +72,7 @@ class SocketPoolWrapper:
 
 
 pixel = neopixel.NeoPixel(
-    board.NEOPIXEL, 1, brightness=0.3, auto_write=True, pixel_order="GRB"
+    board.NEOPIXEL, 1, brightness=0.3, auto_write=True, pixel_order=neopixel.RGB
 )
 device = scd4.SCD4X(quiet=False)
 device.start_periodic_measurement()
@@ -81,64 +81,44 @@ color_index = 0
 # Turn on the power to the NeoPixel
 feathers3.set_ldo2_power(True)
 
-
-def get_rgb_values(co2):
-    if co2 < 800:
-        return (255, 0, 0)
-    elif co2 >= 800 and co2 < 1200:
-        return (255, 255, 0)
-    else:
-        return (0, 255, 0)
-
-
 while True:
-    time.sleep(15)
+    time.sleep(0.08)
     try:
         co2, temperature, relative_humidity, timestamp = device.measure()
         print(
             f"co2:{co2} ppm, T:{temperature} C, humid: {relative_humidity} %, timestamp: {timestamp} ms"
         )
-        co2_payload = json.dumps({"value": co2, "unit": "ppm", "timestamp": timestamp})
-        temp_payload = json.dumps(
-            {"value": temperature, "C": "ppm", "timestamp": timestamp}
-        )
-        humid_payload = json.dumps(
-            {"value": relative_humidity, "unit": "ppm", "timestamp": timestamp}
-        )
+        # co2_payload = json.dumps({"value": co2, "unit": "ppm", "timestamp": timestamp})
+        # temp_payload = json.dumps(
+        #     {"value": temperature, "C": "ppm", "timestamp": timestamp}
+        # )
+        # humid_payload = json.dumps(
+        #     {"value": relative_humidity, "unit": "ppm", "timestamp": timestamp}
+        # )
         # mqtt_client.publish(MQTT_TOPIC_CO2, co2_payload)
         # mqtt_client.publish(MQTT_TOPIC_TEMP, temp_payload)
         # mqtt_client.publish(MQTT_TOPIC_HUMID, humid_payload)
+        if co2 < 800:
+            print("green")
+            r, g, b = (255, 0, 0)
+        elif co2 >= 800 and co2 < 1200:
+            print("yellow")
+            r, g, b = (255, 255, 0)
+        else:
+            print("red")
+            r, g, b = (0, 255, 0)
+        # r, g, b = feathers3.rgb_color_wheel(color_index)
+        # print(r, g, b)
+        # Set the colour on the NeoPixel
+        pixel[0] = (r, g, b, 0.5)
+        # Increase the wheel index
+        color_index += 1
 
-        while True:
-            time.sleep(15)
-            try:
-                co2, temperature, relative_humidity, timestamp = device.measure()
-                print(
-                    f"co2:{co2} ppm, T:{temperature} C, humid: {relative_humidity} %, timestamp: {timestamp} ms"
-                )
-                co2_payload = json.dumps(
-                    {"value": co2, "unit": "ppm", "timestamp": timestamp}
-                )
-                temp_payload = json.dumps(
-                    {"value": temperature, "C": "ppm", "timestamp": timestamp}
-                )
-                humid_payload = json.dumps(
-                    {"value": relative_humidity, "unit": "ppm", "timestamp": timestamp}
-                )
-                # mqtt_client.publish(MQTT_TOPIC_CO2, co2_payload)
-                # mqtt_client.publish(MQTT_TOPIC_TEMP, temp_payload)
-                # mqtt_client.publish(MQTT_TOPIC_HUMID, humid_payload)
-
-                G, R, B = get_rgb_values(co2)
-                pixel[0] = (G, R, B, 0.5)
-
-                feathers3.led_blink
-
-                # mqtt_client.loop(timeout=10)
-
-            except Exception as e:
-                print(f"ERROR - {e}")
-                print("Attempting to reconnect...")
+        # If the index == 255, loop it
+        if color_index == 255:
+            color_index = 0
+            # Invert the internal LED state every half colour cycle
+            feathers3.led_blink
 
         # mqtt_client.loop(timeout=10)
 
